@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  android-emulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: content-blocker-emulator
+    environment:
+      - ANDROID_HOME=/root/android-sdk
+      - ANDROID_SDK_ROOT=/root/android-sdk
+      - ANDROID_AVD_HOME=/root/.android/avd
+    ports:
+      - "5555:5555"
+      - "5037:5037"
+    volumes:
+      - android-cache:/root/.android
+      - app-data:/app
+    privileged: true
+    command: |
+      /bin/bash -c "
+      echo 'Starting Android Emulator...'
+      emulator -avd emulator_default -no-window -no-audio -no-snapshot-load &
+      sleep 30
+      adb wait-for-device
+      echo 'Emulator is ready'
+      adb devices
+      /bin/bash
+      "
+
+  gradle-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: content-blocker-build
+    working_dir: /app
+    volumes:
+      - .:/app
+      - gradle-cache:/root/.gradle
+    command: |
+      /bin/bash -c "
+      chmod +x ./gradlew
+      ./gradlew build --no-daemon
+      ./gradlew assembleDebug --no-daemon
+      "
+
+volumes:
+  android-cache:
+  gradle-cache:
+  app-data:
